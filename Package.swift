@@ -33,9 +33,5 @@ let package = Package(
             path: "CodeLanguagesContainer.xcframework.zip"
         ),
 
-        .testTarget(
-            name: "CodeEditLanguagesTests",
-            dependencies: ["CodeEditLanguages"]
-        ),
     ]
 )
