@@ -28,6 +28,13 @@ This package includes a binary framework `CodeLanguagesContainer.xcframework` wh
 
 The languages are then served as a `CodeLanguage`.
 
+## Fork Maintenance Note
+
+In this fork, `CodeEditLanguages` is maintained as a grammar/resource provider only.
+Language modeling, language detection, and consumer-facing `CodeLanguage` logic are implemented in [WriteMind](https://github.com/hjortura/WriteMind).
+
+When syncing from `CodeEditApp/CodeEditLanguages`, conflicts around `CodeLanguage*` source files should generally prefer this fork's architecture (resource-only package).
+
 ## SwiftTreeSitter
 
 This package heavily depends on [SwiftTreeSitter](https://github.com/ChimeHQ/SwiftTreeSitter) by [Matt Massicotte](https://twitter.com/mattie).
