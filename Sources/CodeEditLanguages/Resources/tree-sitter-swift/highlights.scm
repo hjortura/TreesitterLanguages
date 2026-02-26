@@ -2,7 +2,7 @@
 [ "\\(" "(" ")" "[" "]" "{" "}"] @punctuation.bracket ; TODO: "\\(" ")" in interpolations should be @punctuation.special
 
 ; Identifiers
-(attribute) @attribute
+(attribute) @variable
 (type_identifier) @type
 (self_expression) @variable.builtin
 
