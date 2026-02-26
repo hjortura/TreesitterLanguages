@@ -2,8 +2,7 @@
 //  LanguageResourcesTests.swift
 //  CodeEditLanguages
 //
-//  Created by Khan Winter on 6/6/25.
-//
+
 
 import XCTest
 @testable import CodeEditLanguages

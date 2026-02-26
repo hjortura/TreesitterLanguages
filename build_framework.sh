@@ -29,6 +29,9 @@ fi
 # Set pipefail to make sure that the script fails if any of the commands fail
 set -euo pipefail
 
+ROOT_DIR="$PWD"
+INCLUDE_NVIM_QUERIES="${INCLUDE_NVIM_QUERIES:-0}"
+
 # build the framework project `CodeLanguages-Container`
 status "Clean Building CodeLanguages-Container.xcodeproj..."
 xcodebuild \
@@ -79,8 +82,6 @@ rm -rf "$RESOURCES_PATH"
 
 # find and copy language queries
 LIST=$( echo $CHECKOUTS_PATH/tree-* )
-
-OLD_PWD="$PWD"
 
 for lang in $LIST ; do
     # determine how many targets a given package has
@@ -138,22 +139,36 @@ done
 
 status "Language queries copied to package resources!"
 
-# Clone the neovim-treesitter repository, which has more language query files than
-# the language repos contain by default and use query files.
-#
-# We also copy a license notice into the top of each file to make sure contributors
-# and forks are directed to the correct place.
+# Make copied query files writable for local edits/fixes.
+chmod -R u+w "$RESOURCES_PATH"
 
-status "Downloading missing queries from neovim-treesitter"
+# Apply small compatibility corrections needed by SwiftTreeSitter consumers.
+SWIFT_HIGHLIGHTS="$RESOURCES_PATH/tree-sitter-swift/highlights.scm"
+RUST_HIGHLIGHTS="$RESOURCES_PATH/tree-sitter-rust/highlights.scm"
+if [ -f "$SWIFT_HIGHLIGHTS" ]; then
+    sed -i '' 's/(attribute) @variable/(attribute) @attribute/' "$SWIFT_HIGHLIGHTS"
+fi
+if [ -f "$RUST_HIGHLIGHTS" ]; then
+    sed -i '' '/#match? @constant/s/\$'"'"'"/$"/' "$RUST_HIGHLIGHTS"
+fi
 
-CLONE_DIR="$PWD/DerivedData/Clones"
+if [ "$INCLUDE_NVIM_QUERIES" = "1" ]; then
+    # Clone the neovim-treesitter repository, which has more language query files than
+    # the language repos contain by default and use query files.
+    #
+    # We also copy a license notice into the top of each file to make sure contributors
+    # and forks are directed to the correct place.
 
-rm -rf $CLONE_DIR
-mkdir -p $CLONE_DIR
+    status "Downloading missing queries from neovim-treesitter"
 
-MISSING_QUERIES_URL="https://github.com/nvim-treesitter/nvim-treesitter"
-MISSING_QUERIES_ROOT="queries"
-LICENSE_NOTICE='; Copyright 2025 nvim-treesitter
+    CLONE_DIR="$ROOT_DIR/DerivedData/Clones"
+
+    rm -rf $CLONE_DIR
+    mkdir -p $CLONE_DIR
+
+    MISSING_QUERIES_URL="https://github.com/nvim-treesitter/nvim-treesitter"
+    MISSING_QUERIES_ROOT="queries"
+    LICENSE_NOTICE='; Copyright 2025 nvim-treesitter
 ;
 ; Licensed under the Apache License, Version 2.0 (the "License");
 ; you may not use this file except in compliance with the License.
@@ -169,43 +184,46 @@ LICENSE_NOTICE='; Copyright 2025 nvim-treesitter
 
 '
 
-git clone $MISSING_QUERIES_URL $CLONE_DIR &> $QUIET_OUTPUT
+    git clone $MISSING_QUERIES_URL $CLONE_DIR &> $QUIET_OUTPUT
 
-cd $CLONE_DIR
-cd $MISSING_QUERIES_ROOT
+    cd $CLONE_DIR
+    cd $MISSING_QUERIES_ROOT
 
-for lang in $LIST ; do
-    # remove prefix and convert to snake_case (replace - with _)
-    lang_trim=${lang##*/}
-    lang_trim="${lang_trim#tree-sitter-}"
-    lang_trim=$(printf '%s' "$lang_trim" | tr '-' '_')
+    for lang in $LIST ; do
+        # remove prefix and convert to snake_case (replace - with _)
+        lang_trim=${lang##*/}
+        lang_trim="${lang_trim#tree-sitter-}"
+        lang_trim=$(printf '%s' "$lang_trim" | tr '-' '_')
 
-    TARGET_DIR="$RESOURCES_PATH/${lang##*/}"
+        TARGET_DIR="$RESOURCES_PATH/${lang##*/}"
 
-    SRC_DIR="$PWD/$lang_trim"
-    if [ ! -d "$SRC_DIR" ]; then
-        continue
-    fi
-
-    # Find all scm query files and copy them into our resources folder where they don't already exist.
-    find $SRC_DIR -type f -name "*.scm" | while IFS= read -r src_file; do
-        filename=$(basename "$src_file")
-        dest_file="$TARGET_DIR/$filename"
-
-        if [ ! -e "$dest_file" ]; then
-            echo "  Copying $dest_file" &> $QUIET_OUTPUT
-            # copy the license notice into a header in the file
-            echo "$LICENSE_NOTICE" > $dest_file
-            cat $src_file >> $dest_file
+        SRC_DIR="$PWD/$lang_trim"
+        if [ ! -d "$SRC_DIR" ]; then
+            continue
         fi
-    done
-done
 
-status "Missing queries successfully added!"
+        # Find all scm query files and copy them into our resources folder where they don't already exist.
+        find $SRC_DIR -type f -name "*.scm" | while IFS= read -r src_file; do
+            filename=$(basename "$src_file")
+            dest_file="$TARGET_DIR/$filename"
+
+            if [ ! -e "$dest_file" ]; then
+                echo "  Copying $dest_file" &> $QUIET_OUTPUT
+                # copy the license notice into a header in the file
+                echo "$LICENSE_NOTICE" > $dest_file
+                cat $src_file >> $dest_file
+            fi
+        done
+    done
+
+    status "Missing queries successfully added!"
+else
+    status "Skipping optional nvim query import (set INCLUDE_NVIM_QUERIES=1 to enable)."
+fi
 
 # cleanup derived derived data
 
-cd $OLD_PWD
+cd $ROOT_DIR
 
 if [ -d "$PWD/DerivedData" ]; then
     status "Cleaning up DerivedData..."
