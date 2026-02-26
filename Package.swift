@@ -12,16 +12,11 @@ let package = Package(
             targets: ["CodeEditLanguages"]
         ),
     ],
-    dependencies: [
-        .package(
-            url: "https://github.com/ChimeHQ/SwiftTreeSitter.git",
-            from: "0.9.0"
-        ),
-    ],
+    dependencies: [],
     targets: [
         .target(
             name: "CodeEditLanguages",
-            dependencies: ["CodeLanguagesContainer", "SwiftTreeSitter"],
+            dependencies: ["CodeLanguagesContainer"],
             resources: [
                 .copy("Resources")
             ],
