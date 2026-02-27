@@ -14,11 +14,11 @@ Parser symbols are not provided by `CodeEditLanguages` directly.
 ## 1) Grammar and query resources
 
 1. Add the grammar package dependency in:
-   - `Packages/TreesitterLanguages/CodeLanguages-Container/CodeLanguages-Container.xcodeproj`
+   - `Tools/ParserPackBuilder/Package.swift`
 2. Ensure query files exist upstream (`highlights.scm`, and optional `injections.scm`, `locals.scm`).
 3. Refresh local resources:
    ```bash
-   ./scripts/treesitter-workbench.sh rebuild-container --debug
+   ./scripts/parser-pack-workflow.sh sync-queries --debug
    ```
 4. Verify the language resource folder exists under:
    - `Packages/TreesitterLanguages/Sources/CodeEditLanguages/Resources/tree-sitter-<lang>/`
@@ -30,13 +30,13 @@ Update the language runtime in these files:
 - `Packages/SwiftTreeSitter/Sources/WriteMindTreeSitterIntegration/TreeSitterLanguage.swift`
 - `Packages/SwiftTreeSitter/Sources/WriteMindTreeSitterIntegration/TreeSitterLanguage+ParserSymbol.swift`
 - `Packages/SwiftTreeSitter/Sources/WriteMindTreeSitterIntegration/CodeLanguage+Definitions.swift`
-- `scripts/parser-pack-groups.sh`
+- `Tools/ParserPackWorkspace/scripts/parser-pack-groups.sh`
 - `Tools/ParserPackBuilder/Package.swift` (add grammar package/product to the appropriate pack target)
 
 Then rebuild/install packs:
 
 ```bash
-./scripts/treesitter-workbench.sh build-packs
+./scripts/parser-pack-workflow.sh build
 ```
 
 ## Validation
@@ -44,7 +44,7 @@ Then rebuild/install packs:
 Run full validation:
 
 ```bash
-./scripts/treesitter-workbench.sh full
+./scripts/parser-pack-workflow.sh full
 ```
 
 This refreshes queries, rebuilds parser packs, and runs parser-pack validation/tests.

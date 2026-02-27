@@ -5,43 +5,63 @@
 
 
 import XCTest
-@testable import CodeEditLanguages
+import CodeEditLanguages
 
 final class LanguageResourcesTests: XCTestCase {
-    /// Look at each language and do two checks:
-    /// - All files bundled in the final product are referenced by the ``CodeLanguage.additionalHighlights`` set. If
-    ///   there's missing files, we raise a warning. This is useful for ensuring we aren't accidentally missing
-    ///   injections or tags if they're available. Some languages have some odd highlights though so it's a logged
-    ///   warning.
-    /// - All files referenced by ``CodeLanguage.additionalHighlights`` are bundled. If this fails we fail the test.
-    func test_allResourcesAreReferencedInDefinitions() throws {
-        for language in CodeLanguage.allLanguages {
-            let resourceURL = try XCTUnwrap(
-                language.resourceURL?.appendingPathComponent("Resources/tree-sitter-\(language.tsName)")
-            )
-            let resources = try FileManager.default
-                .contentsOfDirectory(
-                    atPath: resourceURL.absoluteURL.path(percentEncoded: false)
-                )
-                .map { String(try XCTUnwrap($0.split(separator: ".").first)) }
-                .sorted()
+	/// This package is resource-only: ensure bundled query folders are usable by consumers.
+	func test_treeSitterResourceFoldersContainHighlights() throws {
+		let root = try XCTUnwrap(resourceUrl)
+		let entries = try FileManager.default.contentsOfDirectory(
+			at: root,
+			includingPropertiesForKeys: [URLResourceKey.isDirectoryKey],
+			options: [.skipsHiddenFiles]
+		)
 
-            for bundledResource in resources {
-                guard bundledResource != "highlights",
-                      !(language.additionalHighlights?.contains(bundledResource) ?? false) else {
-                    continue
-                }
+		let languageDirectories = try entries.filter { url in
+			guard url.lastPathComponent.hasPrefix("tree-sitter-") else {
+				return false
+			}
+			let values = try url.resourceValues(forKeys: [URLResourceKey.isDirectoryKey])
+			return values.isDirectory == true
+		}
 
-                print("[warning:] `\(language.id)` is bundling, but not referencing: `\(bundledResource).scm`")
-            }
+		XCTAssertFalse(languageDirectories.isEmpty, "No tree-sitter resource directories were found.")
 
-            // If we're referencing any files that don't exist, we need to error out
-            let missingFiles = (language.additionalHighlights ?? []).filter({ !Set(resources).contains($0) })
-            if !missingFiles.isEmpty {
-                XCTFail(
-                    "Language `\(language.id)` is referencing files that are not bundled: \(missingFiles)"
-                )
-            }
-        }
-    }
+		for dir in languageDirectories {
+			let highlightURL = dir.appendingPathComponent("highlights.scm")
+			XCTAssertTrue(
+				FileManager.default.fileExists(atPath: highlightURL.path),
+				"Missing highlights.scm in \(dir.lastPathComponent)"
+			)
+		}
+	}
+
+	func test_queryFilesUseScmExtension() throws {
+		let root = try XCTUnwrap(resourceUrl)
+		let entries = try FileManager.default.contentsOfDirectory(
+			at: root,
+			includingPropertiesForKeys: [URLResourceKey.isDirectoryKey],
+			options: [.skipsHiddenFiles]
+		)
+
+		for dir in entries where dir.lastPathComponent.hasPrefix("tree-sitter-") {
+			let values = try dir.resourceValues(forKeys: [URLResourceKey.isDirectoryKey])
+			guard values.isDirectory == true else { continue }
+
+			let files = try FileManager.default.contentsOfDirectory(
+				at: dir,
+				includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
+				options: [.skipsHiddenFiles]
+			)
+			for file in files {
+				let fileValues = try file.resourceValues(forKeys: [URLResourceKey.isRegularFileKey])
+				guard fileValues.isRegularFile == true else { continue }
+				XCTAssertEqual(
+					file.pathExtension,
+					"scm",
+					"Unexpected non-.scm file in \(dir.lastPathComponent): \(file.lastPathComponent)"
+				)
+			}
+		}
+	}
 }
