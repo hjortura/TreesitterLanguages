@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-# This script builds the CodeLanguagesContainer.xcframework
+# This script refreshes language query resources from grammar package checkouts.
 #
 # Just call it from the root of the project
 # $ ./build_framework.sh
@@ -32,49 +32,30 @@ set -euo pipefail
 ROOT_DIR="$PWD"
 INCLUDE_NVIM_QUERIES="${INCLUDE_NVIM_QUERIES:-0}"
 
-# build the framework project `CodeLanguages-Container`
-status "Clean Building CodeLanguages-Container.xcodeproj..."
+# Resolve grammar package dependencies via the CodeLanguages-Container project.
+status "Resolving CodeLanguages-Container package dependencies..."
 xcodebuild \
     -project CodeLanguages-Container/CodeLanguages-Container.xcodeproj \
     -scheme CodeLanguages-Container \
-    -destination "platform=macOS" \
     -derivedDataPath DerivedData \
-    -configuration Release \
-    ARCHS="arm64 x86_64" \
-    ONLY_ACTIVE_ARCH=NO \
-    $QUIET_FLAG clean build &> $QUIET_OUTPUT
-status "Build complete!"
+    -resolvePackageDependencies \
+    $QUIET_FLAG &> $QUIET_OUTPUT
+status "Package dependency resolution complete!"
 
-# set path variables
-PRODUCTS_PATH="$PWD/DerivedData/Build/Products/Release"
-FRAMEWORK_PATH="$PRODUCTS_PATH/CodeLanguages_Container.framework"
-OUTPUT_PATH="CodeLanguagesContainer.xcframework"
-
-# remove previous generated files
-rm -rf "$OUTPUT_PATH"
-rm "$OUTPUT_PATH".zip
-status "Removed previous generated files!"
-
-# build the binary framework
-status "Creating CodeLanguagesContainer.xcframework..."
-xcodebuild \
-    -create-xcframework \
-    -framework "$FRAMEWORK_PATH" \
-    -output "$OUTPUT_PATH" &> $QUIET_OUTPUT
-
-# zip the xcframework
-status "Zipping CodeLanguagesContainer.xcframework..."
-zip -r -q -y "$OUTPUT_PATH".zip "$OUTPUT_PATH"
-
-# remove the unzipped xcframework
-rm -rf "$OUTPUT_PATH"
-
-status "CodeLanguagesContainer.xcframework.zip created!"
+# Keep the package resource-only: remove legacy container artifacts if present.
+rm -rf "CodeLanguagesContainer.xcframework"
+rm -f "CodeLanguagesContainer.xcframework.zip"
+status "Removed legacy container binary artifacts."
 
 # copy language queries to package resources
 # set path variables
 CHECKOUTS_PATH="$PWD/DerivedData/SourcePackages/checkouts"
 RESOURCES_PATH="$PWD/Sources/CodeEditLanguages/Resources"
+
+if [ ! -d "$CHECKOUTS_PATH" ]; then
+    echo "Missing package checkouts at $CHECKOUTS_PATH. Package resolution failed." >&2
+    exit 1
+fi
 
 # remove previous copied files
 status "Copying language queries to package resources..."

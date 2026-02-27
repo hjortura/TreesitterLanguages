@@ -16,17 +16,14 @@ let package = Package(
     targets: [
         .target(
             name: "CodeEditLanguages",
-            dependencies: ["CodeLanguagesContainer"],
             resources: [
                 .copy("Resources")
             ],
             linkerSettings: [.linkedLibrary("c++")]
         ),
-
-        .binaryTarget(
-            name: "CodeLanguagesContainer",
-            path: "CodeLanguagesContainer.xcframework.zip"
+        .testTarget(
+            name: "CodeEditLanguagesTests",
+            dependencies: ["CodeEditLanguages"]
         ),
-
     ]
 )

@@ -1,14 +1,13 @@
 # ``CodeEditLanguages``
 
-A collection of `tree-sitter` languages for syntax highlighting.
+A collection of `tree-sitter` language query resources for syntax highlighting.
 
 ## Overview
 
 ![logo](codeeditlanguages-logo)
 
-This package includes a binary framework `CodeLanguagesContainer.xcframework` which bundles all `tree-sitter` languages in a single binary to greatly reduce SPM package resolution times.
-
-The languages are then served as a ``CodeLanguage``.
+This fork provides resource files only (`highlights.scm`, `injections.scm`, `locals.scm`, etc.).
+Parser symbols are loaded at runtime by WriteMind parser packs.
 
 ## SwiftTreeSitter
 
